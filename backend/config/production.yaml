@@ -1,0 +1,57 @@
+# Loco.rs production environment configuration for Render deployment
+
+logger:
+  enable: true
+  pretty_backtrace: false
+  level: info
+  format: json
+
+server:
+  # Render injects the PORT environment variable automatically
+  port: <%= get_env(name="PORT", default=5150) %>
+  # Bind to 0.0.0.0 so Render's reverse proxy can route traffic into the container
+  binding: 0.0.0.0
+  host: <%= get_env(name="RENDER_EXTERNAL_URL", default="http://localhost") %>
+  ident: hiretrack-backend
+  middlewares:
+    # Allow up to 6 MB payloads for validated 5 MB PDF/DOCX resume uploads
+    limit_payload:
+      enable: true
+      body_limit: 6mb
+    # Allow requests from the deployed Vercel frontend origin
+    cors:
+      enable: true
+      allow_origins:
+        - <%= get_env(name="FRONTEND_ORIGIN", default="http://localhost:5173") %>
+      allow_methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+      allow_headers:
+        - Content-Type
+        - Authorization
+
+workers:
+  mode: BackgroundAsync
+
+auth:
+  jwt:
+    # Must be set in Render Environment Variables (never commit production secrets)
+    secret: <%= get_env(name="JWT_SECRET") %>
+    # 24 hours in seconds
+    expiration: 86400
+
+database:
+  # Automatically injected by Render PostgreSQL (DATABASE_URL)
+  uri: <%= get_env(name="DATABASE_URL") %>
+  enable_logging: false
+  min_connections: 1
+  max_connections: 10
+  connect_timeout: 5000
+  idle_timeout: 5000
+  # Run pending SeaORM migrations automatically when the Render service boots
+  auto_migrate: true
+  dangerously_truncate: false
+  dangerously_recreate: false

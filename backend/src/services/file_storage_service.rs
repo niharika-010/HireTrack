@@ -136,10 +136,11 @@ pub async fn validate_and_store_resume(
     let storage_mode = std::env::var("STORAGE_MODE").unwrap_or_else(|_| String::from("development"));
     let loco_env = std::env::var("LOCO_ENV").unwrap_or_else(|_| String::from("development"));
 
-    let use_object_storage = storage_mode == "object_storage" || loco_env == "production";
+    let use_object_storage =
+        storage_mode == "object_storage" || (loco_env == "production" && storage_mode != "persistent_disk");
 
     let storage_url = if use_object_storage {
-        // Production path: never write resumes to local temporary disk; require a secure HTTPS object store URL.
+        // External object storage mode (S3 / R2 / GCS): never write local temp files; require HTTPS URL.
         let base_url = std::env::var("STORAGE_BASE_URL").map_err(|_| {
             FileStorageError::StorageFailure(String::from(
                 "Production object storage is not configured (missing STORAGE_BASE_URL).",
@@ -155,7 +156,7 @@ pub async fn validate_and_store_resume(
         let trimmed_base = base_url.trim_end_matches('/');
         format!("{trimmed_base}/{storage_key}")
     } else {
-        // Local development path: persist inside dedicated `backend/storage/resumes/` folder (never OS temp).
+        // Persistent directory mode (`development` or Render `persistent_disk`, never OS `/tmp`).
         let storage_dir = development_resume_storage_directory();
         tokio::fs::create_dir_all(&storage_dir).await.map_err(|error| {
             FileStorageError::StorageFailure(format!(
@@ -171,6 +172,10 @@ pub async fn validate_and_store_resume(
             })?;
 
         let public_base = std::env::var("STORAGE_BASE_URL")
+            .or_else(|_| {
+                std::env::var("RENDER_EXTERNAL_URL")
+                    .map(|url| format!("{}/api/candidates/resumes", url.trim_end_matches('/')))
+            })
             .unwrap_or_else(|_| String::from("http://localhost:5150/api/candidates/resumes"));
         let trimmed_base = public_base.trim_end_matches('/');
         format!("{trimmed_base}/{storage_key}")

@@ -1,0 +1,36 @@
+# Render Blueprint for HireTrack Backend (Rust + Loco.rs) and PostgreSQL Database
+# Deploy directly in Render via: New -> Blueprint -> connect GitHub repo niharika-010/HireTrack
+
+databases:
+  - name: hiretrack-db
+    databaseName: hiretrack_production
+    user: hiretrack_user
+    plan: free
+
+services:
+  - type: web
+    name: hiretrack-backend
+    runtime: docker
+    plan: free
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: LOCO_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: hiretrack-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_ORIGIN
+        # Update this to your exact Vercel URL after deploying the frontend (e.g. https://hiretrack.vercel.app)
+        value: https://hiretrack.vercel.app
+      - key: STORAGE_MODE
+        value: persistent_disk
+      - key: RESUME_STORAGE_DIR
+        value: /app/storage/resumes
+      - key: STORAGE_BASE_URL
+        # Update this to your exact Render service URL + /api/candidates/resumes
+        value: https://hiretrack-backend.onrender.com/api/candidates/resumes

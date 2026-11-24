@@ -1,0 +1,7 @@
+target/
+migration/target/
+storage/
+.env
+.env.*
+!.env.example
+*.log

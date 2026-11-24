@@ -115,4 +115,30 @@ cd backend
 cargo check
 cargo run -- start
 ```
-The backend API runs at `http://localhost:5150` and exposes `GET /api/health` for Phase 1 connectivity checks.
+The backend API runs at `http://localhost:5150` and exposes `GET /api/health` for connectivity checks.
+
+---
+
+## Production Deployment (Render + Vercel)
+
+### Backend + PostgreSQL on Render
+1. Go to https://dashboard.render.com/ → **New +** → **Blueprint** and connect this GitHub repository.
+2. Render automatically reads `render.yaml` and provisions:
+   - **`hiretrack-db`** (managed PostgreSQL database)
+   - **`hiretrack-backend`** (Docker Web Service built from `backend/Dockerfile` with `LOCO_ENV=production` and health check `/api/health`)
+3. Copy your deployed Render backend URL (e.g., `https://hiretrack-backend.onrender.com`).
+
+### Frontend on Vercel
+1. Go to https://vercel.com/new and import this GitHub repository.
+2. Set **Root Directory** to **`frontend`** (Framework Preset: **Vite**).
+3. Add these **Environment Variables** in Vercel:
+   - `VITE_APP_NAME` = `HireTrack`
+   - `VITE_APP_ENVIRONMENT` = `production`
+   - `VITE_API_BASE_URL` = `https://<your-render-service>.onrender.com/api`
+4. Click **Deploy** (SPA routing is pre-configured in `frontend/vercel.json`).
+
+### Final CORS Sync on Render
+Once Vercel gives you your live frontend URL (e.g., `https://hire-track.vercel.app`), open **`hiretrack-backend` → Environment** on Render and update:
+- `FRONTEND_ORIGIN` = `https://<your-vercel-app>.vercel.app` (no trailing slash)
+- `STORAGE_BASE_URL` = `https://<your-render-service>.onrender.com/api/candidates/resumes`
+Then save changes to redeploy.
