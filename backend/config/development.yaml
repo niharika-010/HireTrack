@@ -1,0 +1,54 @@
+# Loco.rs development environment configuration for HireTrack
+
+logger:
+  enable: true
+  pretty_backtrace: true
+  level: debug
+  format: compact
+
+server:
+  port: <%= get_env(name="SERVER_PORT", default=5150) %>
+  binding: localhost
+  host: http://localhost
+  ident: hiretrack-backend
+  middlewares:
+    # Allow up to 6 MB payloads so validated 5 MB PDF/DOCX resumes upload cleanly
+    limit_payload:
+      enable: true
+      body_limit: 6mb
+    # Allow requests from the local Vite React frontend during development
+    cors:
+      enable: true
+      allow_origins:
+        - http://localhost:5173
+      allow_methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+      allow_headers:
+        - Content-Type
+        - Authorization
+
+workers:
+  mode: BackgroundAsync
+
+auth:
+  jwt:
+    # Loaded from JWT_SECRET in backend/.env (fallback is strictly for local development)
+    secret: <%= get_env(name="JWT_SECRET", default="hiretrack_local_dev_jwt_secret_change_in_production") %>
+    # Token lifetime in seconds (86400 seconds = 24 hours)
+    expiration: 86400
+
+database:
+  # Set DATABASE_URL in backend/.env to override the local development fallback
+  uri: <%= get_env(name="DATABASE_URL", default="postgres://postgres:postgres@localhost:5432/hiretrack_development") %>
+  enable_logging: true
+  min_connections: 1
+  max_connections: 5
+  connect_timeout: 5000
+  idle_timeout: 5000
+  auto_migrate: true
+  dangerously_truncate: false
+  dangerously_recreate: false
